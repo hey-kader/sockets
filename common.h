@@ -14,11 +14,24 @@
 #include <sys/ioctl.h>
 #include <stdarg.h>
 
-#define MAX 255
+char *bin2hex (const unsigned char *input, size_t len) {
+    char *result;
+    char *hexits = "0123456789ABCDEF";
 
-#define PORT 8080 
-#define IP "66.85.133.188"
+    if (input == NULL || len <= 0) {
+	return NULL;
+    }
 
-void error (void) {
-    printf ("error!\n");
+    int resultlength = (len*3)+1;
+    result = malloc(resultlength);
+    bzero(result, resultlength);
+
+    for (int i = 0; i < len; i++) {
+
+	result[i*3] = hexits[input[i] >> 4];;
+	result[(i*3)+1] = hexits[input[i] & 0x0F];
+	result[(i*3)+2] = ' ';
+
+    }
+    return result;
 }
