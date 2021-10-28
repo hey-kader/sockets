@@ -1,7 +1,6 @@
 #include "common.h"
-
 #define IP "66.85.133.188"
-#define PORT 8080
+#define PORT 80
 
 #define MAXLINE 256
 
@@ -12,27 +11,19 @@ void error (void) {
 
 int main (int argc, char *argv[]) {
 
-    if (argc < 3) {
-//	error ();
-	;	
-    }
-
     struct sockaddr_in server_addr, client_addr;
-    int fsockd, newfsockd, n;
-    uint8_t buffer[MAXLINE+1];
-    uint8_t recvline[MAXLINE+1];
-
-    printf("IPv4:\t %s\n",IP);
-    printf("PORT:\t %d\n",PORT);
-
-    bzero(&server_addr, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    server_addr.sin_port = PORT;
+    int fsockd, newfsockd, n, clilen;
+    char * buffer[MAXLINE+1];
 
     fsockd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (bind(fsockd, (struct sockaddr *) &server_addr, sizeof(&server_addr)) > 0) {
+    bzero((char *)&server_addr, sizeof(&server_addr));
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    if (bind(fsockd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
 	error ();
     }
 
@@ -40,53 +31,20 @@ int main (int argc, char *argv[]) {
 	printf ("the socket is bound.\n");
     }
 
-    // number of connections to take
-    if (listen (fsockd, 5) > 0) {
-	error ();
-    }
+    listen (fsockd, 5);
+    printf ("listening...\n");
 
-    else {
-	printf ("listening...\n");
-    }
+    clilen = sizeof (client_addr);
 
-    int running = 1;
-    int connfd, listenfd;
+    newfsockd = accept (fsockd, (struct sockaddr *) &client_addr, &clilen);
 
-    printf("waiting for a connection on port %d\n",PORT);
-    while (running) {
+    n = read(newfsockd, buffer, MAXLINE-1);
 
-	struct sockaddr_in addr;
-	socklen_t addr_len;
+    printf("here is the message:\t%s\n",buffer);
+    write (newfsockd, (char*) buffer, strlen((char *)buffer));
 
-	fflush(stdout);
-	connfd = accept (listenfd, (struct socket_addr *) NULL, NULL);
+    close(newfsockd);
 
-	memset (recvline, 0, MAXLINE);
-
-	while ( (n = read(connfd, recvline, MAXLINE-1) ) > 0 ) {
-	    fprintf(stdout, "\n%s\n\n%s", bin2hex(recvline, n), recvline);
-
-	    if (recvline[n-1] == '\n') {
-		break;
-	    }
-
-	    if (n < 0) {
-		error ();
-	    }
-
-	    snprintf((char*)buffer, sizeof(buffer), "HTTP/1.0 200 OK\r\n\r\nHello");
-	    write (connfd, (char*) buffer, strlen((char *)buffer));
-	    close(connfd);
-	}
-
-    }
-
-    newfsockd = accept (fsockd, (struct sockaddr *) &client_addr, sizeof(&client_addr));
-    n = read (newfsockd, buffer, 255);
-
-    printf("recieved: \n%s\n", buffer);
-
-    n = write (fsockd, "i got your message. \n", 18);
     
     return 0;
 }
